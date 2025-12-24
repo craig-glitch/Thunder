@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>THUNDER | Ride With Power</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Leaflet Map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+    color: white;
+}
+
+.hidden { display:none; }
+
+header {
+    text-align: center;
+    padding: 30px;
+}
+
+header h1 {
+    font-size: 3em;
+    color: #00eaff;
+}
+
+header p {
+    max-width: 700px;
+    margin: auto;
+    opacity: 0.9;
+}
+
+.container {
+    padding: 20px;
+    max-width: 1100px;
+    margin: auto;
+}
+
+.choice {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-top: 40px;
+}
+
+.choice button {
+    padding: 20px 40px;
+    font-size: 1.2em;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    background: #00eaff;
+    color: black;
+    font-weight: bold;
+}
+
+section {
+    margin-top: 40px;
+    background: rgba(0,0,0,0.4);
+    padding: 25px;
+    border-radius: 15px;
+}
+
+input, button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    border-radius: 8px;
+    border: none;
+}
+
+button {
+    background: #00eaff;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.profile {
+    margin-top: 20px;
+    background: rgba(255,255,255,0.1);
+    padding: 15px;
+    border-radius: 10px;
+}
+
+img.profile-pic {
+    width: 120px;
+    border-radius: 50%;
+    border: 3px solid #00eaff;
+}
+
+#map {
+    height: 300px;
+    margin-top: 15px;
+    border-radius: 10px;
+}
+
+footer {
+    margin-top: 60px;
+    text-align: center;
+    padding: 20px;
+    font-size: 0.9em;
+    opacity: 0.8;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>⚡ THUNDER ⚡</h1>
+    <p>
+        Ride with power, speed and trust.  
+        A modern ride-hailing experience inspired by innovation.  
+        <br><br>
+        <b>Brought to you by Craig Matsambe</b>
+    </p>
+    <p><b>Owner & Developer: Craig Matsambe 🐱‍🏍🚀</b></p>
+</header>
+
+<div class="container">
+
+<!-- CHOICE -->
+<div class="choice">
+    <button onclick="showDriver()">I am a Driver</button>
+    <button onclick="showPassenger()">I am a Passenger</button>
+</div>
+
+<!-- DRIVER SECTION -->
+<section id="driverSection" class="hidden">
+    <h2>🚗 Driver Registration</h2>
+    <p>Start earning by giving safe and reliable rides.</p>
+
+    <input id="dName" placeholder="Full Name">
+    <input id="dVehicle" placeholder="Vehicle Model">
+    <input id="dReg" placeholder="Vehicle Registration">
+    <input type="file" id="dPhoto" accept="image/*">
+
+    <button onclick="registerDriver()">Register & Start Rides ($5 daily site fee)</button>
+
+    <div id="driverProfile"></div>
+</section>
+
+<!-- PASSENGER SECTION -->
+<section id="passengerSection" class="hidden">
+    <h2>🧍 Passenger</h2>
+    <p>Find drivers near you and travel with confidence.</p>
+
+    <input id="destination" placeholder="Enter Destination">
+    <button onclick="calculateFare()">Find Ride</button>
+
+    <div id="fareResult"></div>
+    <div id="map"></div>
+</section>
+
+<!-- SUPPORT -->
+<section>
+    <h2>📞 Support & Contact</h2>
+    <p>
+        Need help? Reach the developer directly:
+        <br><br>
+        📸 Instagram: <b>__imnot_ye3zy</b><br>
+        📘 Facebook: <b>Craig Matsambe</b>
+    </p>
+</section>
+
+</div>
+
+<footer>
+    © 2025 THUNDER. All Rights Reserved.
+</footer>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+let usedRegistrations = [];
+
+function showDriver(){
+    document.getElementById("driverSection").classList.remove("hidden");
+    document.getElementById("passengerSection").classList.add("hidden");
+}
+
+function showPassenger(){
+    document.getElementById("passengerSection").classList.remove("hidden");
+    document.getElementById("driverSection").classList.add("hidden");
+    loadMap();
+}
+
+function registerDriver(){
+    let name = dName.value;
+    let vehicle = dVehicle.value;
+    let reg = dReg.value;
+    let photo = dPhoto.files[0];
+
+    if(!name || !vehicle || !reg || !photo){
+        alert("Fill all driver details");
+        return;
+    }
+
+    if(usedRegistrations.includes(reg)){
+        alert("This vehicle is already registered");
+        return;
+    }
+
+    usedRegistrations.push(reg);
+
+    let reader = new FileReader();
+    reader.onload = function(){
+        driverProfile.innerHTML = `
+            <div class="profile">
+                <img class="profile-pic" src="${reader.result}">
+                <p><b>${name}</b></p>
+                <p>${vehicle}</p>
+                <p>Vehicle Reg: ${reg}</p>
+                <p>✅ Daily website fee paid</p>
+            </div>
+        `;
+    }
+    reader.readAsDataURL(photo);
+
+    alert("Driver activated! $5 daily website fee processed.");
+}
+
+let map;
+function loadMap(){
+    if(map) return;
+    map = L.map('map').setView([0,0],13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    navigator.geolocation.getCurrentPosition(pos=>{
+        let lat = pos.coords.latitude;
+        let lon = pos.coords.longitude;
+        map.setView([lat,lon],13);
+        L.marker([lat,lon]).addTo(map).bindPopup("Your Location").openPopup();
+    });
+}
+
+function calculateFare(){
+    let distanceKm = Math.random()*10 + 1;
+    let fare = Math.max(3, distanceKm * 0.8);
+
+    fareResult.innerHTML = `
+        <div class="profile">
+            <p>📍 Distance: ${distanceKm.toFixed(2)} km</p>
+            <p>💰 Fare: <b>$${fare.toFixed(2)}</b></p>
+        </div>
+    `;
+}
+</script>
+
+</body>
+</html>
